@@ -34,10 +34,11 @@ def parse_args():
 
     return parser.parse_args()
 
+
 def build_vocab(*files: Path, threshold: int) -> Set[str]:
     word_counts: Counter[Wordtype] = Counter()  # count of each word
     for file in files:
-        token: Wordtype   # type annotation for loop variable below
+        token: Wordtype  # type annotation for loop variable below
         for token in read_tokens(file):
             word_counts[token] += 1
 
@@ -46,7 +47,7 @@ def build_vocab(*files: Path, threshold: int) -> Set[str]:
         OOV,
         EOS,
     }  # We make sure that EOS is in the vocab, even if read_tokens returns it too few times.
-       # But BOS is not in the vocab: it is never a possible outcome, only a context.
+    # But BOS is not in the vocab: it is never a possible outcome, only a context.
 
     sys.stderr.write(f"Vocabulary size is {len(vocab)} types including OOV and EOS\n")
     return vocab
@@ -78,6 +79,7 @@ def main():
     args = parse_args()
     vocab = build_vocab(*args.documents, threshold=args.threshold)
     save_vocab(vocab, args.output)
+
 
 if __name__ == '__main__':
     main()

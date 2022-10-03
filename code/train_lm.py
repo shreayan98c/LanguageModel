@@ -13,11 +13,11 @@ from probs import read_vocab, UniformLanguageModel, AddLambdaLanguageModel, \
 
 log = logging.getLogger(Path(__file__).stem)  # Basically the only okay global variable.
 
-UNIFORM   = "uniform"
+UNIFORM = "uniform"
 ADDLAMBDA = "add_lambda"
-BACKOFF   = "add_lambda_backoff"
+BACKOFF = "add_lambda_backoff"
 LOGLINEAR = "log_linear"
-IMPROVED  = "log_linear_improved"
+IMPROVED = "log_linear_improved"
 SMOOTHERS = [UNIFORM, ADDLAMBDA, BACKOFF, LOGLINEAR, IMPROVED]
 
 
@@ -27,8 +27,9 @@ def get_model_filename(args: argparse.Namespace) -> Path:
         return Path(f"{prefix}~lambda={args.lambda_}.model")
     elif args.smoother in [LOGLINEAR, IMPROVED]:
         return Path(f"{prefix}~lexicon={args.lexicon.name}~l2={args.l2_regularization}.model")
-    else:   
+    else:
         raise NotImplementedError("smoother {args.smoother}")
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -109,6 +110,7 @@ def check_args(args: argparse.Namespace):
         if args.lambda_ == 0.0:
             log.warning("You're training an add-0 (unsmoothed) model")
 
+
 def main():
     args = parse_args()
     logging.basicConfig(level=args.verbose)
@@ -132,12 +134,12 @@ def main():
         lm = BackoffAddLambdaLanguageModel(vocab, args.lambda_)
     elif args.smoother == LOGLINEAR:
         if args.lexicon is None:
-            log.error("{args.smoother} requires a lexicon")   # would be better to check this in argparse
+            log.error("{args.smoother} requires a lexicon")  # would be better to check this in argparse
             sys.exit(1)
         lm = EmbeddingLogLinearLanguageModel(vocab, args.lexicon, args.l2_regularization)
     elif args.smoother == IMPROVED:
         if args.lexicon is None:
-            log.error("{args.smoother} requires a lexicon")   # would be better to check this in argparse
+            log.error("{args.smoother} requires a lexicon")  # would be better to check this in argparse
             sys.exit(1)
         lm = ImprovedLogLinearLanguageModel(vocab, args.lexicon, args.l2_regularization)
     else:

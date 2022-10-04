@@ -107,9 +107,10 @@ def main():
             ct_incorrect_classified += 1
     lm1prob = lm1count / (lm1count + lm2count)
     lm2prob = lm2count / (lm1count + lm2count)
+    total_error_rate = ct_incorrect_classified / len(args.test_files) * 100
     print(f"{lm1count} files were more probably {args.lm1} ({lm1prob})")
     print(f"{lm2count} files were more probably {args.lm2} ({lm2prob})")
-    # print(f"Total error rate {ct_incorrect_classified / len(args.test_files) * 100}")
+    print(f"Total error rate {total_error_rate}")
 
 
 if __name__ == "__main__":

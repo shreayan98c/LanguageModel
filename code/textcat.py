@@ -65,6 +65,7 @@ def file_log_prob(file: Path, lm: LanguageModel) -> float:
     return log_prob
 
 
+
 def main():
     args = parse_args()
     logging.basicConfig(level=args.verbose)
@@ -78,6 +79,23 @@ def main():
     prior_probability = args.prior_probability
 
     # TODO: calculate the probability
+    lm1count = 0
+    lm2count = 0
+    for file in args.test_files:
+        log_prob1: float = file_log_prob(file, lm1)
+        log_prob2: float = file_log_prob(file, lm2)
+        posteriori1 = log_prob1 + math.log(prior_probability)
+        posteriori2 = log_prob2 + math.log(1 - prior_probability)
+        if posteriori1 >= posteriori2:
+            print(f"{args.lm1}\t{file}")
+            lm1count += 1
+        else:
+            print(f"{args.lm2}\t{file}")
+            lm2count += 1
+    lm1prob = lm1count/(lm1count + lm2count)
+    lm2prob = lm2count/(lm1count + lm2count)
+    print(f"{lm1count} files were more probably {args.lm1} ({lm1prob})")
+    print(f"{lm2count} files were more probably {args.lm2} ({lm2prob})")
 
 
 if __name__ == "__main__":

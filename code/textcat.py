@@ -65,6 +65,13 @@ def file_log_prob(file: Path, lm: LanguageModel) -> float:
     return log_prob
 
 
+def find_last(text, pattern):
+    return text.rfind(pattern)
+
+
+def find_second_last(text, pattern):
+    return text.rfind(pattern, 0, text.rfind(pattern))
+
 
 def main():
     args = parse_args()
@@ -78,24 +85,31 @@ def main():
 
     prior_probability = args.prior_probability
 
-    # TODO: calculate the probability
     lm1count = 0
     lm2count = 0
+    ct_incorrect_classified = 0
     for file in args.test_files:
+        dir_name = str(file.parents[0])
+        true_class = str(dir_name[str(dir_name).rindex('\\') + 1:])
         log_prob1: float = file_log_prob(file, lm1)
         log_prob2: float = file_log_prob(file, lm2)
         posteriori1 = log_prob1 + math.log(prior_probability)
         posteriori2 = log_prob2 + math.log(1 - prior_probability)
         if posteriori1 >= posteriori2:
+            predicted_class = 'gen'
             print(f"{args.lm1}\t{file}")
             lm1count += 1
         else:
+            predicted_class = 'spam'
             print(f"{args.lm2}\t{file}")
             lm2count += 1
-    lm1prob = lm1count/(lm1count + lm2count)
-    lm2prob = lm2count/(lm1count + lm2count)
+        if predicted_class != true_class:
+            ct_incorrect_classified += 1
+    lm1prob = lm1count / (lm1count + lm2count)
+    lm2prob = lm2count / (lm1count + lm2count)
     print(f"{lm1count} files were more probably {args.lm1} ({lm1prob})")
     print(f"{lm2count} files were more probably {args.lm2} ({lm2prob})")
+    # print(f"Total error rate {ct_incorrect_classified / len(args.test_files) * 100}")
 
 
 if __name__ == "__main__":

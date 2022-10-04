@@ -16,17 +16,17 @@ log = logging.getLogger(Path(__file__).stem)  # Basically the only okay global v
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "class_zero_model",
+        "lm1",
         type=Path,
-        help="path to the trained model for the class zero (gen)",
+        help="path to the trained model for the genuine",
     )
     parser.add_argument(
-        "class_one_model",
+        "lm2",
         type=Path,
         help="path to the trained model for the class one (spam)",
     )
     parser.add_argument(
-        "prior_prob",
+        "prior_probability",
         type=float,
         help="prior probability for the class zero (gen)",
     )
@@ -70,29 +70,14 @@ def main():
     logging.basicConfig(level=args.verbose)
 
     log.info("Testing...")
-    lm = LanguageModel.load(args.model)
+    lm1 = LanguageModel.load(args.lm1)
+    lm2 = LanguageModel.load(args.lm2)
 
-    # We use natural log for our internal computations and that's
-    # the kind of log-probability that file_log_prob returns.
-    # We'll print that first.
+    assert lm1.vocab == lm2.vocab
 
-    log.info("Per-file log-probabilities:")
-    total_log_prob = 0.0
-    for file in args.test_files:
-        log_prob: float = file_log_prob(file, lm)
-        print(f"{log_prob:g}\t{file}")
-        total_log_prob += log_prob
+    prior_probability = args.prior_probability
 
-    # But cross-entropy is conventionally measured in bits: so when it's
-    # time to print cross-entropy, we convert log base e to log base 2,
-    # by dividing by log(2).
-
-    bits = -total_log_prob / math.log(2)  # convert to bits of surprisal
-    tokens = sum(num_tokens(test_file) for test_file in args.test_files)
-    print(f"Overall cross-entropy:\t{bits / tokens:.5f} bits per token")
-
-    perplexity = 2 ** (bits / tokens)
-    print(f"Perplexity is:\t{perplexity}")
+    # TODO: calculate the probability
 
 
 if __name__ == "__main__":

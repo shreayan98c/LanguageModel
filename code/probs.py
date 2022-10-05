@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import math
 import sys
 
@@ -266,21 +267,28 @@ class LanguageModel:
         if self.progress % freq == 1:
             sys.stderr.write(".")
 
-    def sample (self, max_length: int):
-        initial_weights = (lm.vocab, lambda x:lm.prob("BOS", "BOS", x))
-        X = random.choices (lm.vocab, weights = initial_weights)
+    def sample(self, max_length: int):
+        """
+        Function to sample a random sentence from the LM
+        :param max_length: Max length of the sentence
+        :return: sentence string
+        """
+        vocab = list(self.vocab)
+        initial_weights = list(map(lambda x: self.prob("BOS", "BOS", x), vocab))
+        X = random.choices(vocab, weights=initial_weights)[0]
         C1 = BOS
         C2 = X
-        sentence = ""
-        for i in range(max_length):
-            weights = lm.prob(C1,C2,X)
-            X = random.choices(lm.vocab, weights)
-            sentence += " ".join(X)
+        sentence = X
+        for _ in range(max_length):
+            weights = list(map(lambda x: self.prob(C1, C2, X), vocab))
+            X = random.choices(vocab, weights=weights)[0]
+            sentence += X + " "
             C1, C2 = C2, X
-            if X = "EOS":
-                break
-        print(sentence)
+            if X == "EOS":
+                return sentence
+        sentence += "..."
         return sentence
+
 
 # SPECIFIC FAMILIES OF LANGUAGE MODELS
 
@@ -343,7 +351,7 @@ class BackoffAddLambdaLanguageModel(AddLambdaLanguageModel):
 
         uniform_prob_dist = 1 / self.vocab_size
 
-        backed_off_bigram_estimate = (self.context_count[y, z] + self.lambda_ * self.vocab_size * uniform_prob_dist) /\
+        backed_off_bigram_estimate = (self.context_count[y, z] + self.lambda_ * self.vocab_size * uniform_prob_dist) / \
                                      (self.context_count[(y,)] + self.lambda_ * self.vocab_size)
 
         return ((self.event_count[x, y, z] + self.lambda_ * self.vocab_size * backed_off_bigram_estimate) /

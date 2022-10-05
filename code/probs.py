@@ -266,6 +266,21 @@ class LanguageModel:
         if self.progress % freq == 1:
             sys.stderr.write(".")
 
+    def sample (self, max_length: int):
+        initial_weights = (lm.vocab, lambda x:lm.prob("BOS", "BOS", x))
+        X = random.choices (lm.vocab, weights = initial_weights)
+        C1 = BOS
+        C2 = X
+        sentence = ""
+        for i in range(max_length):
+            weights = lm.prob(C1,C2,X)
+            X = random.choices(lm.vocab, weights)
+            sentence += " ".join(X)
+            C1, C2 = C2, X
+            if X = "EOS":
+                break
+        print(sentence)
+        return sentence
 
 # SPECIFIC FAMILIES OF LANGUAGE MODELS
 

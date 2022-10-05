@@ -145,6 +145,8 @@ def main():
     else:
         raise ValueError(f"Don't recognize smoother name {args.smoother}")
 
+    lm.sample(20)
+
     log.info("Training...")
     lm.train(args.train_file)
     lm.save(destination=model_path)

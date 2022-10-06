@@ -541,10 +541,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         softmax_input = torch.log(numerator)
         P_z_given_xy = torch.nn.functional.log_softmax(softmax_input)
 
-        print(P_z_given_xy)
-
-        result = P_z_given_xy
-        return result
+        return P_z_given_xy[self.lexicon.vocab.index(z)]
 
     def logits(self, x: Wordtype, y: Wordtype, z: Wordtype) -> torch.Tensor:
         """Return a vector of the logs of the unnormalized probabilities, f(xyz) * θ.
@@ -617,7 +614,6 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
         sys.stderr.write("\n")  # done printing progress dots "...."
         log.info(f"Finished counting {self.event_count[()]} tokens")
-
 
         # For each successive training example i, compute the stochastic
         # objective F_i(θ).  This is called the "forward" computation. Don't

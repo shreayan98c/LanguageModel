@@ -495,9 +495,8 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         self.l2: float = l2
 
         # READ THE LEXICON OF WORD VECTORS AND STORE IT IN A USEFUL FORMAT.
-        lexicon = Lexicon.from_file(lexicon_file)
-        self.lexicon = lexicon
-        self.dim = lexicon.n_dims  # SET THIS TO THE DIMENSIONALITY OF THE VECTORS
+        self.lexicon = Lexicon.from_file(lexicon_file)
+        self.dim = self.lexicon.n_dims  # SET THIS TO THE DIMENSIONALITY OF THE VECTORS
 
         # We wrap the following matrices in nn.Parameter objects.
         # This lets PyTorch know that these are parameters of the model
@@ -526,7 +525,6 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # appended `_tensor` to the name of this method to distinguish
         # it from the class's general `log_prob` method.)
 
-        # TODO: IMPLEMENT ME!
         # This method should call the logits helper method.
         # You are free to define other helper methods too.
         #
@@ -534,13 +532,17 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # compute the normalization constant Z, or this method
         # will be very slow. Some useful functions of pytorch that could
         # be useful are torch.logsumexp and torch.log_softmax.
-        raise NotImplementedError("Implement me!")
+        logits = self.logits(x, y, z)
+        numerator = torch.exp(logits)
+        # calculating the normalization constant
+
+        result = self.X
+        return result
 
     def logits(self, x: Wordtype, y: Wordtype, z: Wordtype) -> torch.Tensor:
         """Return a vector of the logs of the unnormalized probabilities, f(xyz) * θ.
         These are commonly known as "logits" or "log-odds": the values that you 
         exponentiate and renormalize in order to get a probability distribution."""
-        # TODO: IMPLEMENT ME!
         # Don't forget that you can create additional methods
         # that you think are useful, if you'd like.
         # It's cleaner than making this function massive.
@@ -549,10 +551,23 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # you can write J @ K as shorthand for torch.mul(J, K).
         # J @ K looks more like the usual math notation.
         #
+        x_word_idx = self.lexicon.vocab.index(x)
+        x_word_embedding = self.lexicon.embeddings[x_word_idx]
+        y_word_idx = self.lexicon.vocab.index(y)
+        y_word_embedding = self.lexicon.embeddings[y_word_idx]
+        z_word_idx = self.lexicon.vocab.index(z)
+        z_word_embedding = self.lexicon.embeddings[z_word_idx]
+
+        x_vector = torch.Tensor(x_word_embedding)
+        y_vector = torch.Tensor(y_word_embedding)
+        z_vector = torch.Tensor(z_word_embedding)
+
+        result = torch.transpose(x_vector) @ self.X @ z_vector + torch.transpose(y_vector) @ self.Y @ z_vector
+
         # The return type, TensorType[()], represents a torch.Tensor scalar.
-        # See Question 7 in INSTRUCTIONS.md for more info about fine-grained 
+        # See Question 7 in INSTRUCTIONS.md for more info about fine-grained
         # type annotations for Tensors.
-        raise NotImplementedError("Implement me!")
+        return result
 
     def train(self, file: Path):  # type: ignore
 

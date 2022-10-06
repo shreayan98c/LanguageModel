@@ -509,6 +509,8 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         self.X = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
         self.Y = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
 
+        self.Z = self.lexicon.embeddings
+
     def log_prob(self, x: Wordtype, y: Wordtype, z: Wordtype) -> float:
         """Return log p(z | xy) according to this language model."""
         # https://pytorch.org/docs/stable/generated/torch.Tensor.item.html
@@ -535,6 +537,8 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         logits = self.logits(x, y, z)
         numerator = torch.exp(logits)
         # calculating the normalization constant
+        softmax_input = math.log(numerator)
+        P_z_given_xy = torch.log_softmax(softmax_input)
 
         result = self.X
         return result
@@ -560,9 +564,10 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
         x_vector = torch.Tensor(x_word_embedding)
         y_vector = torch.Tensor(y_word_embedding)
-        z_vector = torch.Tensor(z_word_embedding)
 
-        result = torch.transpose(x_vector) @ self.X @ z_vector + torch.transpose(y_vector) @ self.Y @ z_vector
+        result = torch.transpose(x_vector) @ self.X @ self.Z + torch.transpose(y_vector) @ self.Y @ self.Z
+        
+        
 
         # The return type, TensorType[()], represents a torch.Tensor scalar.
         # See Question 7 in INSTRUCTIONS.md for more info about fine-grained

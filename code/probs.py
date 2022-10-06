@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import random
 import math
+import tqdm
 import sys
 
 from pathlib import Path
@@ -540,6 +541,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # calculating the normalization constant
         softmax_input = torch.log(numerator)
         P_z_given_xy = torch.nn.functional.log_softmax(softmax_input)
+        # P_z_given_xy = torch.logsumexp(logits, 1)
 
         return P_z_given_xy[self.lexicon.vocab.index(z)]
 
@@ -605,12 +607,16 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # corpus.
         #
         log.info(f"Training from corpus {file}")
+        log_likelyhood = 0
+        token_index = 0
 
-        for trigram in read_trigrams(file, self.vocab):
-            print(trigram)
-            print(self.log_prob(*trigram))
-            exit()
+        for token_index, trigram in enumerate(tqdm.tqdm(read_trigrams(file, self.vocab), total=10*N), start=1):
+            log_likelyhood += self.log_prob(*trigram)
+            print(token_index, trigram, self.log_prob(*trigram))
             self.show_progress()
+
+        cost_function = log_likelyhood / token_index
+        print(log_likelyhood, token_index, cost_function)
 
         sys.stderr.write("\n")  # done printing progress dots "...."
         log.info(f"Finished counting {self.event_count[()]} tokens")

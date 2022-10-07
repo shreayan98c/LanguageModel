@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import random
 import math
+import tqdm
 import sys
 
 from pathlib import Path
@@ -527,6 +528,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         self.Y = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
 
         self.Z = self.lexicon.embeddings
+        self.Z = torch.transpose(self.Z, 0, 1)
 
     def log_prob(self, x: Wordtype, y: Wordtype, z: Wordtype) -> float:
         """Return log p(z | xy) according to this language model."""
@@ -554,11 +556,11 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         logits = self.logits(x, y, z)
         numerator = torch.exp(logits)
         # calculating the normalization constant
-        softmax_input = math.log(numerator)
-        P_z_given_xy = torch.log_softmax(softmax_input)
+        softmax_input = torch.log(numerator)
+        P_z_given_xy = torch.nn.functional.log_softmax(softmax_input)
+        # P_z_given_xy = torch.logsumexp(logits, 1)
 
-        result = self.X
-        return result
+        return P_z_given_xy[self.lexicon.vocab.index(z)]
 
     def logits(self, x: Wordtype, y: Wordtype, z: Wordtype) -> torch.Tensor:
         """Return a vector of the logs of the unnormalized probabilities, f(xyz) * θ.
@@ -582,17 +584,16 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         x_vector = torch.Tensor(x_word_embedding)
         y_vector = torch.Tensor(y_word_embedding)
 
-        result = torch.transpose(x_vector) @ self.X @ self.Z + torch.transpose(y_vector) @ self.Y @ self.Z
-        
-        
-
         # The return type, TensorType[()], represents a torch.Tensor scalar.
         # See Question 7 in INSTRUCTIONS.md for more info about fine-grained
         # type annotations for Tensors.
+        result = x_vector @ self.X @ self.Z + y_vector @ self.Y @ self.Z
         return result
 
     def train(self, file: Path):  # type: ignore
-
+        """
+        Train the log linear model.
+        """
         # Technically this method shouldn't be called `train`,
         # because this means it overrides not only `LanguageModel.train` (as desired)
         # but also `nn.Module.train` (which has a different type).
@@ -622,6 +623,21 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # we provided, which will iterate over all N trigrams in the training
         # corpus.
         #
+        log.info(f"Training from corpus {file}")
+        log_likelyhood = 0
+        token_index = 0
+
+        for token_index, trigram in enumerate(tqdm.tqdm(read_trigrams(file, self.vocab), total=10*N), start=1):
+            log_likelyhood += self.log_prob(*trigram)
+            print(token_index, trigram, self.log_prob(*trigram))
+            self.show_progress()
+
+        cost_function = log_likelyhood / token_index
+        print(log_likelyhood, token_index, cost_function)
+
+        sys.stderr.write("\n")  # done printing progress dots "...."
+        log.info(f"Finished counting {self.event_count[()]} tokens")
+
         # For each successive training example i, compute the stochastic
         # objective F_i(θ).  This is called the "forward" computation. Don't
         # forget to include the regularization term. Part of F_i(θ) will be the

@@ -33,6 +33,7 @@ import torch
 from torch import nn
 from torch import optim
 from torchtyping import TensorType, patch_typeguard
+from SGD_convergent import ConvergentSGD
 from typeguard import typechecked
 from typing import Counter
 from collections import Counter
@@ -615,11 +616,13 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
         # Optimization hyperparameters.
         gamma0 = 0.01  # initial learning rate
+        N = num_tokens(file)
 
         # This is why we needed the nn.Parameter above.
         # The optimizer needs to know the list of parameters
         # it should be trying to update.
-        optimizer = optim.SGD(self.parameters(), lr=gamma0)
+        optimizer = ConvergentSGD(self.parameters(), gamma0=gamma0, lambda_=2 * gamma0 / N)
+        # optimizer = optim.SGD(self.parameters(), lr=gamma0)
 
         # Initialize the parameter matrices to be full of zeros.
         nn.init.zeros_(self.X)  # type: ignore
@@ -632,7 +635,6 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # corpus.
 
         log.info(f"Training from corpus {file}")
-        N = num_tokens(file)
         epochs = 10
 
         for epoch in range(1, epochs + 1):

@@ -6,6 +6,7 @@ according to a given smoothed trigram model.
 import argparse
 import logging
 import math
+import sys
 from pathlib import Path
 
 from probs import Wordtype, LanguageModel, num_tokens, read_trigrams
@@ -110,7 +111,7 @@ def main():
     total_error_rate = ct_incorrect_classified / len(args.test_files) * 100
     print(f"{lm1count} files were more probably {args.lm1} ({lm1prob})")
     print(f"{lm2count} files were more probably {args.lm2} ({lm2prob})")
-    print(f"Total error rate {total_error_rate}")
+    sys.stderr.write(f"Total error rate {total_error_rate}")
 
 
 if __name__ == "__main__":

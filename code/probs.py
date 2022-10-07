@@ -562,18 +562,16 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # You are free to define other helper methods too.
         E = torch.transpose(self.vocab_embeddings, 0, 1)
 
-        x_word_embedding = self.get_embedding_for_element(x)
-        y_word_embedding = self.get_embedding_for_element(y)
-        z_word_embedding = self.get_embedding_for_element(z)
+        x_vector = self.get_embedding_for_element(x)
+        y_vector = self.get_embedding_for_element(y)
+        z_vector = self.get_embedding_for_element(z)
 
-        x_vector, y_vector, z_vector = x_word_embedding, y_word_embedding, z_word_embedding
+        log_p_unnormalized = self.logits(x, y, z)
 
         # Be sure to use vectorization over the vocabulary to
         # compute the normalization constant Z, or this method
         # will be very slow. Some useful functions of pytorch that could
         # be useful are torch.logsumexp and torch.log_softmax.
-        log_p_unnormalized = self.logits(x, y, z)
-
         sum_for_all_z = (np.transpose(x_vector) @ self.X @ E) + (np.transpose(y_vector) @ self.Y @ E)
 
         # calculating the normalization
@@ -592,11 +590,9 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # you can write J @ K as shorthand for torch.mul(J, K).
         # J @ K looks more like the usual math notation.
 
-        x_word_embedding = self.get_embedding_for_element(x)
-        y_word_embedding = self.get_embedding_for_element(y)
-        z_word_embedding = self.get_embedding_for_element(z)
-
-        x_vector, y_vector, z_vector = x_word_embedding, y_word_embedding, z_word_embedding
+        x_vector = self.get_embedding_for_element(x)
+        y_vector = self.get_embedding_for_element(y)
+        z_vector = self.get_embedding_for_element(z)
 
         # The return type, TensorType[()], represents a torch.Tensor scalar.
         # See Question 7 in INSTRUCTIONS.md for more info about fine-grained
@@ -615,14 +611,14 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # The `type: ignore` comment above tells the type checker to ignore this inconsistency.
 
         # Optimization hyperparameters.
-        gamma0 = 0.01  # initial learning rate
+        gamma0 = 0.1  # initial learning rate
         N = num_tokens(file)
 
         # This is why we needed the nn.Parameter above.
         # The optimizer needs to know the list of parameters
         # it should be trying to update.
-        optimizer = ConvergentSGD(self.parameters(), gamma0=gamma0, lambda_=2 * gamma0 / N)
-        # optimizer = optim.SGD(self.parameters(), lr=gamma0)
+        # optimizer = ConvergentSGD(self.parameters(), gamma0=gamma0, lambda_=2 * gamma0 / N)
+        optimizer = optim.SGD(self.parameters(), lr=gamma0)
 
         # Initialize the parameter matrices to be full of zeros.
         nn.init.zeros_(self.X)  # type: ignore
@@ -639,19 +635,20 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
         for epoch in range(1, epochs + 1):
             F = 0
-            for token_index, trigram in enumerate(tqdm.tqdm(read_trigrams(file, self.vocab), total=10 * N), start=1):
+            for trigram in tqdm.tqdm(read_trigrams(file, self.vocab), total=N):
                 # calculate gamma
-                gamma = gamma0 / ((1 + gamma0 * 2 * self.l2 * (epoch - 1)) / N)
+                # gamma = gamma0 / ((1 + gamma0 * 2 * self.l2 * (epoch - 1)) / N)
 
                 sum_of_squared = torch.sum(torch.square(self.X) + torch.square(self.Y))
                 regularization_term = self.l2 * sum_of_squared / N
 
                 log_likelyhood = self.log_prob_tensor(*trigram)
                 F_i = log_likelyhood - regularization_term
-                self.show_progress()
+                # self.show_progress()
 
                 (-F_i).backward()
-                F += F_i / N
+                with torch.no_grad():
+                    F += F_i / N
 
                 optimizer.step()
                 optimizer.zero_grad()

@@ -264,6 +264,23 @@ def read_vocab(vocab_file: Path) -> Vocab:
     log.info(f"Read vocab of size {len(vocab)} from {vocab_file}")
     return vocab
 
+def read_tokens_from_sentence(sentence: List[str], vocab: Optional[Vocab] = None)-> Iterable[Wordtype]:
+    for token in sentence:
+        if vocab is None or token in vocab:
+            yield token
+        else:
+            yield OOV  # replace this out-of-vocabulary word with OOV
+    yield EOS
+
+def read_trigrams_from_sentence(sentence: List[str], vocab: Optional[Vocab] = None)-> Iterable[Wordtype]:
+    x, y = BOS, BOS
+    for z in sentence:
+        yield (x, y, z)
+        if z == EOS:
+            x, y = BOS, BOS  # reset for the next sequence in the file (if any)
+        else:
+            x, y = y, z  # shift over by one position.
+
 
 # LANGUAGE MODEL PARENT CLASS
 

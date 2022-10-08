@@ -9,9 +9,8 @@ import math
 from pathlib import Path
 import re
 
-
-from probs import Wordtype, LanguageModel, num_tokens, read_trigrams, read_tokens_from_sentence, read_trigrams_from_sentence
-
+from probs import Wordtype, LanguageModel, num_tokens, read_trigrams, read_tokens_from_sentence, \
+    read_trigrams_from_sentence
 
 log = logging.getLogger(Path(__file__).stem)  # Basically the only okay global variable.
 
@@ -44,8 +43,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-
-
 def file_total_prob(file: Path, lm: LanguageModel) -> float:
     """The file contains one sentence per line. Return the total
     log-probability of all these sentences, under the given language model.
@@ -53,13 +50,12 @@ def file_total_prob(file: Path, lm: LanguageModel) -> float:
     """
     with open(file) as f:
         correct_length = int(f.readline().split()[0])
-        #transcriptions = {}
+        # transcriptions = {}
         err_rates = []
         u_probs = []
         transcript_lengths = []
         strings = []
-        
-        
+
         lines = f.readlines()[1:]
         for line in lines:
             line = line.strip("\n")
@@ -68,22 +64,22 @@ def file_total_prob(file: Path, lm: LanguageModel) -> float:
             u_probs.append(float(u_prob))
             transcript_lengths.append(transcript_len)
             strings.append(sentence)
-        
+
         log_probs = []
-        
 
         for sentence in strings:
-            x: Wordtype; y: Wordtype; z: Wordtype
+            x: Wordtype;
+            y: Wordtype;
+            z: Wordtype
             log_prob = 0
             for (x, y, z) in read_trigrams_from_sentence(sentence, lm.vocab):
                 log_prob += lm.log_prob(x, y, z)  # log p(z | xy)
             log_probs.append(log_prob)
-        
+
         total_probs = [sum(x) for x in zip(u_probs, log_probs)]
         chosen_transcription_index = max(enumerate(total_probs))[0]
         chosen_transcription_err_rate = err_rates[chosen_transcription_index]
         return chosen_transcription_err_rate, correct_length
-
 
 
 def main():
@@ -92,7 +88,7 @@ def main():
 
     log.info("Testing...")
     lm = LanguageModel.load(args.model)
-    
+
     # We use natural log for our internal computations and that's
     # the kind of log-probability that file_log_prob returns.
     # We'll print that first.
@@ -106,9 +102,8 @@ def main():
         print(f"{err_rate:.3f}\t{file}")
         total_lengths += correct_length
         total_err_counts += err_rate * correct_length
-    overall_err_rate = total_err_counts/total_lengths
+    overall_err_rate = total_err_counts / total_lengths
     print(f"{overall_err_rate:.3f}\t OVERALL")
-        
 
 
 if __name__ == "__main__":

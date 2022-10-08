@@ -598,6 +598,12 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # The operator `@` is a nice way to write matrix multiplication:
         # you can write J @ K as shorthand for torch.mul(J, K).
         # J @ K looks more like the usual math notation.
+        if x not in self.vocab:
+            x = 'OOV'
+        if y not in self.vocab:
+            y = 'OOV'
+        if z not in self.vocab:
+            z = 'OOV'
 
         x_vector = self.get_embedding_for_element(x)
         y_vector = self.get_embedding_for_element(y)

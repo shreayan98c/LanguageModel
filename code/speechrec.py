@@ -3,14 +3,14 @@
 Computes the total log probability of the sequences of tokens in each file,
 according to a given smoothed trigram model.  
 """
-import argparse
-import logging
-import math
-from pathlib import Path
 import re
+import math
+import argparse
+from pathlib import Path
+from operator import itemgetter
+from probs import Wordtype, LanguageModel, read_trigrams_from_sentence
 
-from probs import Wordtype, LanguageModel, num_tokens, read_trigrams, read_tokens_from_sentence, \
-    read_trigrams_from_sentence
+import logging
 
 log = logging.getLogger(Path(__file__).stem)  # Basically the only okay global variable.
 
@@ -62,7 +62,7 @@ def file_total_prob(file: Path, lm: LanguageModel) -> float:
             err_rate, u_prob, transcript_len, sentence = re.split("\t", line)
             err_rates.append(float(err_rate))
             u_probs.append(float(u_prob))
-            transcript_lengths.append(transcript_len)
+            transcript_lengths.append(int(transcript_len))
             strings.append(sentence)
 
         log_probs = []
@@ -77,9 +77,10 @@ def file_total_prob(file: Path, lm: LanguageModel) -> float:
             log_probs.append(log_prob)
 
         total_probs = [sum(x) for x in zip(u_probs, log_probs)]
-        chosen_transcription_index = max(enumerate(total_probs))[0]
-        chosen_transcription_err_rate = err_rates[chosen_transcription_index]
-        return chosen_transcription_err_rate, correct_length
+        chosen_transcription_index, _ = max(enumerate(total_probs), key=itemgetter(1))
+        chosen_transcript_err_rate = err_rates[chosen_transcription_index]
+        chosen_transcript_length = transcript_lengths[chosen_transcription_index]
+        return chosen_transcript_err_rate, chosen_transcript_length, correct_length
 
 
 def main():
@@ -98,9 +99,9 @@ def main():
     total_lengths = 0
     total_err_counts = 0
     for file in args.test_files:
-        err_rate, correct_length = file_total_prob(file, lm)
+        err_rate, transcript_length, correct_length = file_total_prob(file, lm)
         print(f"{err_rate:.3f}\t{file}")
-        total_lengths += correct_length
+        total_lengths += transcript_length
         total_err_counts += err_rate * correct_length
     overall_err_rate = total_err_counts / total_lengths
     print(f"{overall_err_rate:.3f}\t OVERALL")

@@ -561,6 +561,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # This method should call the logits helper method.
         # You are free to define other helper methods too.
         E = torch.transpose(self.vocab_embeddings, 0, 1)
+        # E = self.vocab_embeddings
 
         x_vector = self.get_embedding_for_element(x)
         y_vector = self.get_embedding_for_element(y)
@@ -572,6 +573,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # compute the normalization constant Z, or this method
         # will be very slow. Some useful functions of pytorch that could
         # be useful are torch.logsumexp and torch.log_softmax.
+        # sum_for_all_z = (x_vector @ self.X @ np.transpose(E)) + (y_vector @ self.Y @ np.transpose(E))
         sum_for_all_z = (np.transpose(x_vector) @ self.X @ E) + (np.transpose(y_vector) @ self.Y @ E)
 
         # calculating the normalization
@@ -597,7 +599,8 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # The return type, TensorType[()], represents a torch.Tensor scalar.
         # See Question 7 in INSTRUCTIONS.md for more info about fine-grained
         # type annotations for Tensors.
-        log_prob = (np.transpose(x_vector) @ self.X @ z_vector) + (np.transpose(y_vector) @ self.Y @ z_vector)
+        log_prob = (x_vector @ self.X @ np.transpose(z_vector)) + (y_vector @ self.Y @ np.transpose(z_vector))
+        # log_prob = (np.transpose(x_vector) @ self.X @ z_vector) + (np.transpose(y_vector) @ self.Y @ z_vector)
         return log_prob
 
     def train(self, file: Path):  # type: ignore
@@ -611,7 +614,7 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         # The `type: ignore` comment above tells the type checker to ignore this inconsistency.
 
         # Optimization hyperparameters.
-        gamma0 = 0.1  # initial learning rate
+        gamma0 = 0.0001  # initial learning rate
         N = num_tokens(file)
 
         # This is why we needed the nn.Parameter above.
@@ -644,14 +647,14 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
                 log_likelyhood = self.log_prob_tensor(*trigram)
                 F_i = log_likelyhood - regularization_term
-                # self.show_progress()
 
                 (-F_i).backward()
                 with torch.no_grad():
-                    F += F_i / N
+                    F += F_i
 
                 optimizer.step()
                 optimizer.zero_grad()
+            F /= N
             print(f"epoch {epoch}: F = {F}")
 
         sys.stderr.write("\n")  # done printing progress dots "...."

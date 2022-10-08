@@ -111,7 +111,7 @@ def main():
     total_error_rate = ct_incorrect_classified / len(args.test_files) * 100
     print(f"{lm1count} files were more probably {args.lm1} ({lm1prob})")
     print(f"{lm2count} files were more probably {args.lm2} ({lm2prob})")
-    sys.stderr.write(f"Total error rate {total_error_rate}")
+    # print(f"Total error rate {total_error_rate}")
 
 
 if __name__ == "__main__":

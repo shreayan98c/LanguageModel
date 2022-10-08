@@ -652,9 +652,6 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
         for epoch in range(1, epochs + 1):
             F = 0
             for trigram in tqdm.tqdm(read_trigrams(file, self.vocab), total=N):
-                # calculate gamma
-                # gamma = gamma0 / ((1 + gamma0 * 2 * self.l2 * (epoch - 1)) / N)
-
                 sum_of_squared = torch.sum(torch.square(self.X) + torch.square(self.Y))
                 regularization_term = self.l2 * sum_of_squared / N
 
@@ -755,6 +752,7 @@ class ImprovedLogLinearLanguageModel(EmbeddingLogLinearLanguageModel):
         # We can also store other tensors in the model class,
         # like constant coefficients that shouldn't be altered by
         # training, but those wouldn't use nn.Parameter.
+        self.W = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
         self.X = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
         self.Y = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
         self.Z = nn.Parameter(torch.zeros((self.dim, self.dim)), requires_grad=True)
@@ -819,9 +817,8 @@ class ImprovedLogLinearLanguageModel(EmbeddingLogLinearLanguageModel):
         # See Question 7 in INSTRUCTIONS.md for more info about fine-grained
         # type annotations for Tensors.
         log_prob = (x_vector @ self.X @ np.transpose(z_vector)) + (y_vector @ self.Y @ np.transpose(z_vector)) + (
-                self.check_oov(z) @ self.Z @ np.transpose(self.check_oov(z)))
-        # log_prob = (x_vector @ self.X @ np.transpose(z_vector)) + (y_vector @ self.Y @ np.transpose(z_vector))
-        # log_prob = (np.transpose(x_vector) @ self.X @ z_vector) + (np.transpose(y_vector) @ self.Y @ z_vector)
+                    self.check_oov(z) @ self.Z @ np.transpose(self.check_oov(z))) + (
+                               x_vector @ self.W @ np.transpose(y_vector))
         return log_prob
 
     @typechecked
@@ -853,7 +850,8 @@ class ImprovedLogLinearLanguageModel(EmbeddingLogLinearLanguageModel):
         # sum_for_all_z = (x_vector @ self.X @ np.transpose(E)) + (y_vector @ self.Y @ np.transpose(E))
         # sum_for_all_z = (np.transpose(x_vector) @ self.X @ E) + (np.transpose(y_vector) @ self.Y @ E)
         sum_for_all_z = (np.transpose(x_vector) @ self.X @ E) + (np.transpose(y_vector) @ self.Y @ E) + (
-                    np.transpose(self.check_oov(z)) @ self.Z @ E)
+                np.transpose(self.check_oov(z)) @ self.Z @ E) + np.transpose(
+            x_vector) @ self.W @ y_vector * torch.ones((self.vocab_embeddings.shape[0]))
 
         # calculating the normalization
         log_p_normalized = log_p_unnormalized - torch.logsumexp(sum_for_all_z, 0)
@@ -879,6 +877,7 @@ class ImprovedLogLinearLanguageModel(EmbeddingLogLinearLanguageModel):
         optimizer = ConvergentSGD(self.parameters(), gamma0=gamma0, lambda_=2 * gamma0 / N)
 
         # Initialize the parameter matrices to be full of zeros.
+        nn.init.zeros_(self.W)  # type: ignore
         nn.init.zeros_(self.X)  # type: ignore
         nn.init.zeros_(self.Y)  # type: ignore
         nn.init.zeros_(self.Z)  # type: ignore
@@ -895,7 +894,6 @@ class ImprovedLogLinearLanguageModel(EmbeddingLogLinearLanguageModel):
         for epoch in range(1, epochs + 1):
             F = 0
             for trigram in tqdm.tqdm(read_trigrams(file, self.vocab), total=N):
-
                 # calculate the probabilites and regularize them
                 sum_of_squared = torch.sum(torch.square(self.X) + torch.square(self.Y))
                 regularization_term = self.l2 * sum_of_squared / N

@@ -501,12 +501,12 @@ class BackoffAddLambdaLanguageModel(AddLambdaLanguageModel):
 
         backed_off_unigram_estimate = (self.event_count[
                                            (z,)] + self.lambda_ * self.vocab_size * uniform_prob_dist) / (
-                                                  sum([self.event_count[event] for event in self.event_count if
-                                                       len(event) == 1]) + self.lambda_ * self.vocab_size)
+                                              sum([self.event_count[event] for event in self.event_count if
+                                                   len(event) == 1]) + self.lambda_ * self.vocab_size)
 
         backed_off_bigram_estimate = (self.event_count[
                                           (y, z)] + self.lambda_ * self.vocab_size * backed_off_unigram_estimate) / (
-                                                 self.context_count[(y,)] + self.lambda_ * self.vocab_size)
+                                             self.context_count[(y,)] + self.lambda_ * self.vocab_size)
 
         return ((self.event_count[(x, y, z)] + self.lambda_ * self.vocab_size * backed_off_bigram_estimate) / (
                 self.context_count[(x, y)] + self.lambda_ * self.vocab_size))

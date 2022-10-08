@@ -82,16 +82,14 @@ def main():
     lm1 = LanguageModel.load(args.lm1)
     lm2 = LanguageModel.load(args.lm2)
 
-    assert lm1.vocab == lm2.vocab
-
     prior_probability = args.prior_probability
 
     lm1count = 0
     lm2count = 0
     ct_incorrect_classified = 0
     for file in args.test_files:
-        dir_name = str(file.parents[0])
-        true_class = str(dir_name[str(dir_name).rindex('\\') + 1:])
+        # dir_name = str(file.parents[0])
+        # true_class = str(dir_name[str(dir_name).rindex('\\') + 1:])
         log_prob1: float = file_log_prob(file, lm1)
         log_prob2: float = file_log_prob(file, lm2)
         posteriori1 = log_prob1 + math.log(prior_probability)
@@ -104,8 +102,8 @@ def main():
             predicted_class = 'spam'
             print(f"{args.lm2}\t{file}")
             lm2count += 1
-        if predicted_class != true_class:
-            ct_incorrect_classified += 1
+        # if predicted_class != true_class:
+        #     ct_incorrect_classified += 1
     lm1prob = lm1count / (lm1count + lm2count)
     lm2prob = lm2count / (lm1count + lm2count)
     total_error_rate = ct_incorrect_classified / len(args.test_files) * 100

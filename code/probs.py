@@ -493,18 +493,23 @@ class BackoffAddLambdaLanguageModel(AddLambdaLanguageModel):
     def prob(self, x: Wordtype, y: Wordtype, z: Wordtype) -> float:
         assert self.event_count[x, y, z] <= self.context_count[x, y]
         assert self.context_count[y, z] <= self.context_count[(y,)]
-
-        uniform_prob_dist = 1 / self.vocab_size
-
-        backed_off_bigram_estimate = (self.context_count[y, z] + self.lambda_ * self.vocab_size * uniform_prob_dist) / \
-                                     (self.context_count[(y,)] + self.lambda_ * self.vocab_size)
-
-        return ((self.event_count[x, y, z] + self.lambda_ * self.vocab_size * backed_off_bigram_estimate) /
-                (self.context_count[x, y] + self.lambda_ * self.vocab_size))
-
         # Don't forget the difference between the Wordtype z and the
         # 1-element tuple (z,). If you're looking up counts,
         # these will have very different counts!
+
+        uniform_prob_dist = 1 / self.vocab_size
+
+        backed_off_unigram_estimate = (self.event_count[
+                                           (z,)] + self.lambda_ * self.vocab_size * uniform_prob_dist) / (
+                                                  sum([self.event_count[event] for event in self.event_count if
+                                                       len(event) == 1]) + self.lambda_ * self.vocab_size)
+
+        backed_off_bigram_estimate = (self.event_count[
+                                          (y, z)] + self.lambda_ * self.vocab_size * backed_off_unigram_estimate) / (
+                                                 self.context_count[(y,)] + self.lambda_ * self.vocab_size)
+
+        return ((self.event_count[(x, y, z)] + self.lambda_ * self.vocab_size * backed_off_bigram_estimate) / (
+                self.context_count[(x, y)] + self.lambda_ * self.vocab_size))
 
 
 class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
@@ -535,10 +540,12 @@ class EmbeddingLogLinearLanguageModel(LanguageModel, nn.Module):
 
     def get_embedding_for_element(self, element):
         """Function to lookup the vocab space to get the embedding for a word"""
-        oov_idx = self.lexicon.vocab.index('OOL')
+        ool_idx = self.lexicon.vocab.index('OOL')
+        if element not in self.lexicon.vocab or element == 'OOV':
+            return self.lexicon.embeddings[ool_idx]
         idx = self.lexicon.vocab.index(element)
         if not idx:
-            return self.lexicon.embeddings[oov_idx]
+            return self.lexicon.embeddings[ool_idx]
         embedding = self.lexicon.embeddings[idx]
         return embedding
 

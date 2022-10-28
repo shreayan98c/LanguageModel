@@ -47,7 +47,9 @@ def file_log_prob(file: Path, lm: LanguageModel) -> float:
     (This is a natural log, as for all our internal computations.)
     """
     log_prob = 0.0
-    x: Wordtype; y: Wordtype; z: Wordtype    # type annotation for loop variables below
+    x: Wordtype
+    y: Wordtype
+    z: Wordtype  # type annotation for loop variables below
     for (x, y, z) in read_trigrams(file, lm.vocab):
         log_prob += lm.log_prob(x, y, z)  # log p(z | xy)
     return log_prob
@@ -59,7 +61,7 @@ def main():
 
     log.info("Testing...")
     lm = LanguageModel.load(args.model)
-    
+
     # We use natural log for our internal computations and that's
     # the kind of log-probability that file_log_prob returns.
     # We'll print that first.
@@ -75,7 +77,7 @@ def main():
     # time to print cross-entropy, we convert log base e to log base 2, 
     # by dividing by log(2).
 
-    bits = -total_log_prob / math.log(2)   # convert to bits of surprisal
+    bits = -total_log_prob / math.log(2)  # convert to bits of surprisal
     tokens = sum(num_tokens(test_file) for test_file in args.test_files)
     print(f"Overall cross-entropy:\t{bits / tokens:.5f} bits per token")
 
